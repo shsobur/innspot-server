@@ -29,7 +29,20 @@ async function run() {
     // await client.connect();
     // Send a ping to confirm a successful connection
 
-    
+    const roomsCollection = client.db("innspot").collection("rooms");
+
+
+
+
+
+    app.get("/rooms", async (req, res) => {
+      const result = await roomsCollection.find().toArray()
+      res.send(result);
+    })
+
+
+
+
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
