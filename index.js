@@ -3,7 +3,7 @@ const cors = require("cors");
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 // Middleware__
 app.use(cors());
@@ -30,13 +30,40 @@ async function run() {
     // Send a ping to confirm a successful connection
 
     const roomsCollection = client.db("innspot").collection("rooms");
+    const bookingCollection = client.db("innspot").collection("bookings");
 
 
 
 
+    // Get oparation for available room data__
 
     app.get("/rooms", async (req, res) => {
-      const result = await roomsCollection.find().toArray()
+      try{
+        const query = {status: "Available"};
+        const result = await roomsCollection.find(query).toArray();
+        res.send(result);
+      }
+      catch(error) {
+        console.log(error)
+        res.status(500).send({massage: "Error fetching data"})
+      }
+    })
+
+    // Get oparation for specific room__  
+
+    app.get("/rooms/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const result = await roomsCollection.findOne(query)
+      res.send(result);
+    })
+
+    // Post oparation for add booking__
+
+    app.post("/bookings", async (req, res) => {
+      const booking = req.body;
+      console.log(booking);
+      const result = await bookingCollection.insertOne(booking);
       res.send(result);
     })
 
