@@ -67,6 +67,25 @@ async function run() {
       res.send(result);
     })
 
+    // Get oparation for find booking__
+
+    app.get("/bookings/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = {userEmail: email}
+      const cursur = bookingCollection.find(query);
+      const result = await cursur.toArray();
+      res.send(result);
+    })
+
+    // Delete opatation for booking__
+
+    app.delete("/bookings/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await bookingCollection.deleteOne(query);
+      res.send(result);
+    })
+
 
 
 
