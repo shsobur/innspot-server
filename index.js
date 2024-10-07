@@ -35,7 +35,7 @@ async function run() {
 
 
 
-    // Get oparation for available room data__
+    // Get operation for available room data__
 
     app.get("/rooms", async (req, res) => {
       try{
@@ -49,7 +49,7 @@ async function run() {
       }
     })
 
-    // Get oparation for specific room__  
+    // Get operation for specific room__  
 
     app.get("/rooms/:id", async (req, res) => {
       const id = req.params.id;
@@ -58,7 +58,7 @@ async function run() {
       res.send(result);
     })
 
-    // Post oparation for add booking__
+    // Post operation for add booking__
 
     app.post("/bookings", async (req, res) => {
       const booking = req.body;
@@ -67,7 +67,7 @@ async function run() {
       res.send(result);
     })
 
-    // Get oparation for find booking__
+    // Get operation for find booking__
 
     app.get("/bookings/:email", async (req, res) => {
       const email = req.params.email;
@@ -77,12 +77,33 @@ async function run() {
       res.send(result);
     })
 
-    // Delete opatation for booking__
+    // Delete operation for booking__
 
     app.delete("/bookings/:id", async (req, res) => {
       const id = req.params.id;
       const query = {_id: new ObjectId(id)}
       const result = await bookingCollection.deleteOne(query);
+      res.send(result);
+    })
+
+    // Patch operation for booking__
+
+    app.patch("/bookings/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)};
+      const updateBooking = req.body;
+      console.log(updateBooking);
+      const updateDoc = {
+        $set: {
+          userName: updateBooking.userName,
+          contactUserEmail: updateBooking.contactUserEmail,
+          checkInDate: updateBooking.checkInDate,
+          checkOutDate: updateBooking.checkOutDate,
+          totalDays: updateBooking.totalDays,
+          totalPrice: updateBooking.totalPrice
+        }
+      }
+      const result = await bookingCollection.updateOne(filter, updateDoc);
       res.send(result);
     })
 
