@@ -39,9 +39,15 @@ async function run() {
 
     app.get("/rooms", async (req, res) => {
       try{
+        const filter = req.query;
         const query = {status: "Available"};
-        const result = await roomsCollection.find(query).toArray();
-        res.send(result);
+        const options = {
+          sort: {
+            pricePerNight: filter.sort === "asc" ? -1 : 1
+          }
+        }
+        const result = await roomsCollection.find(query, options).toArray();
+        res.send(result)
       }
       catch(error) {
         console.log(error)
