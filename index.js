@@ -1,19 +1,37 @@
 const express = require("express");
 const cors = require("cors");
-require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
+require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 // Middleware__
-app.use(cors({
-  origin: ["http://localhost:5173"],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: ["http://localhost:5173" || "http://localhost:5174"],
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(cookieParser());
+
+// Custom middleware__
+
+const verifyToken = (req, res, next) => {
+  const token = req?.cookies?.accessToken;
+  if (!token) {
+    return res.status(401).send({ massage: "Unauthorized access" });
+  }
+  jwt.verify(token, process.env.API_SECRET_TOKEN, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ massage: "Unauthorized access" });
+    }
+    req.user = decoded;
+    next();
+  });
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.g4yea9q.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -35,29 +53,31 @@ async function run() {
     const roomsCollection = client.db("innspot").collection("rooms");
     const bookingCollection = client.db("innspot").collection("bookings");
 
-//  Secret auth related api__
+    //  Secret auth related api__
 
     // jwt token api__
 
     app.post("/jwt", async (req, res) => {
       const user = req.body;
-
-      console.log(user);
-
-      const token = jwt.sign(user, process.env.API_SECRET_TOKEN, { expiresIn: "2h" });
+      const token = jwt.sign(user, process.env.API_SECRET_TOKEN, {
+        expiresIn: "24h",
+      });
       res
-      .cookie("secretToken", token, {
-        httpOnly: true,
-        secure: false,
-        maxAge: 24 * 60 * 60 * 1000,
-      })
-      .send({success: true})
-    })
+        .cookie("accessToken", token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: "none",
+        })
+        .send({ success: true });
+    });
 
+    app.post("/logout", async (req, res) => {
+      const user = req.body;
+      console.log(user);
+      res.clearCookie("accessToken", { maxAge: 0 }).send({ success: true });
+    });
 
-
-
-// All client side servise related api__
+    // All client_side servise related api__
 
     // Get operation for available room data__
 
@@ -67,7 +87,7 @@ async function run() {
         const query = { status: "Available" };
         const options = {
           sort: {
-            pricePerNight: filter.sort === "asc" ? -1 : 1,
+            pricePerNight: filter.sort === "asc" ? 1 : -1,
           },
         };
         const result = await roomsCollection.find(query, options).toArray();
@@ -112,7 +132,7 @@ async function run() {
     app.patch("/cancelRoom/:number", async (req, res) => {
       try {
         const number = req.params.number;
-        const filter = {roomNumber: parseInt(number)};
+        const filter = { roomNumber: parseInt(number) };
         const roomStateValue = req.body;
         const updateDoc = {
           $set: {
@@ -131,17 +151,18 @@ async function run() {
 
     app.post("/bookings", async (req, res) => {
       const booking = req.body;
-
-      console.log(booking);
-
       const result = await bookingCollection.insertOne(booking);
       res.send(result);
     });
 
     // Get operation for find booking__
 
-    app.get("/bookings/:email", async (req, res) => {
+    app.get("/bookings/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
+      if (email !== req.user.email) {
+        return res.status(403).send({ massage: "Forbidden access" });
+      }
+
       const query = { userEmail: email };
       const cursur = bookingCollection.find(query);
       const result = await cursur.toArray();
@@ -163,9 +184,6 @@ async function run() {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateBooking = req.body;
-
-      console.log(updateBooking);
-
       const updateDoc = {
         $set: {
           userName: updateBooking.userName,
@@ -179,14 +197,6 @@ async function run() {
       const result = await bookingCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
-
-
-
-
-
-
-
-
 
     await client.db("admin").command({ ping: 1 });
     console.log(
